@@ -5,10 +5,10 @@ namespace Aacotroneo\Saml2;
 use OneLogin\Saml2\Auth as OneLogin_Saml2_Auth;
 use OneLogin\Saml2\Error as OneLogin_Saml2_Error;
 use Aacotroneo\Saml2\Events\Saml2LogoutEvent;
-
 use Log;
 use Psr\Log\InvalidArgumentException;
 use URL;
+use App\Data\Models\DynamoEnvInfo;
 
 class Saml2Auth
 {
@@ -52,15 +52,15 @@ class Saml2Auth
          */
 
         // SAML2 利用する場合
-        if (getEnvInfo('saml2.enable') == 1) {
+        if (static::getSamlInfo('saml2.enable') == 1) {
             // IdP識別子ID
-            $config['idp']['entityId'] = getEnvInfo('saml2.idp_entityid');
+            $config['idp']['entityId'] = static::getSamlInfo('saml2.idp_entityid');
             // IdP ログイン SSO URL
-            $config['idp']['singleSignOnService']['url'] = getEnvInfo('saml2.ipd_sso_url');
+            $config['idp']['singleSignOnService']['url'] = static::getSamlInfo('saml2.idp_sso_url');
             // IdP ログアウト URL
-            $config['idp']['singleLogoutService']['url'] = getEnvInfo('saml2.ipd_sl_url');
+            $config['idp']['singleLogoutService']['url'] = static::getSamlInfo('saml2.idp_sl_url');
             // IdP 証明書
-            $config['idp']['x509cert'] = getEnvInfo('saml2.ipd_x509');
+            $config['idp']['x509cert'] = static::getSamlInfo('saml2.idp_x509');
         } else {
             throw new \InvalidArgumentException('"' . $idpName . '" is not a valid IdP.');
         }
@@ -277,5 +277,13 @@ class Saml2Auth
         $regex = '/-{5}BEGIN(?:\s|\w)+' . $delimiter . '-{5}\s*(.+?)\s*-{5}END(?:\s|\w)+' . $delimiter . '-{5}/m';
         preg_match($regex, $keyString, $matches);
         return empty($matches[1]) ? '' : $matches[1];
+    }
+
+    protected static function getSamlInfo(string $key = null)
+    {
+        $envInfoModel = new DynamoEnvInfo();
+        $envInfo = $envInfoModel->where('envKey', $key)->first()->toArray();
+
+        return $envInfo['value'];
     }
 }
